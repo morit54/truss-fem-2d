@@ -1,5 +1,5 @@
 import numpy as np
-from math import sin, cos, tan
+from math import sin, cos, atan2
 from .node import Node
 from functools import cached_property
 
@@ -8,7 +8,7 @@ class TrussElement2D:
                  number: int,
                  start_node: Node,
                  end_node: Node,
-                 E=210000000.0,
+                 E=210_000_000,
                  A=0.02
                  ):
         """
@@ -38,15 +38,15 @@ class TrussElement2D:
         """returns the angle of the element to the x-axis in [rad]"""
         delta_y = self.end_node.y - self.start_node.y
         delta_x = self.end_node.x - self.start_node.x
-        alpha = tan(delta_y/delta_x)
+        alpha = atan2(delta_y, delta_x)
         return alpha
 
     @cached_property
     def element_stiffness_matrix(self) -> np.ndarray:
         """returns the element stiffness matrix in the global coordinate system"""
         factor = self.E * self.A / self.length
-        c = cos(self.length)
-        s = sin(self.length)
+        c = cos(self.alpha)
+        s = sin(self.alpha)
 
         # column 1
         k11 = factor * c**2
@@ -55,7 +55,7 @@ class TrussElement2D:
         k41 = -k21
 
         # column 2
-        k12 = -k21
+        k12 = k21
         k22 = factor * s**2
         k32 = -k21
         k42 = -k22

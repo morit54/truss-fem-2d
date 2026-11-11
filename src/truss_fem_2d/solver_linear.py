@@ -2,6 +2,46 @@ from functools import cached_property
 import numpy as np
 from .static_system import StaticSystem
 from .node import DegreeOfFreedom
+from .element import TrussElement2D
+
+def _get_normal_force(
+        element: TrussElement2D,
+        disp_vector: np.ndarray
+        ):
+    """
+    # get normal force
+    - checks if the element either got stretched- or compressed
+      - stretched -> positive normal force (tension)
+      - compressed -> negative normal force (compression)
+    """
+    force_vector = element.element_stiffness_matrix @ disp_vector
+    # get initial coordinates
+    x1, y1, x2, y2 = (element.start_node.x, element.start_node.y, element.end_node.x, element.end_node.y)
+    
+    # get displacements
+    x1_disp, y1_disp, x2_disp, y2_disp = disp_vector
+    
+    # get new coordinates
+    x1_new = x1 + x1_disp
+    y1_new = y1 + y1_disp
+    x2_new = x2 + x2_disp
+    y2_new = y2 + y2_disp
+    
+    # calculate new length
+    l_new = ((x2_new-x1_new)**2 + (y2_new-y1_new)**2)**0.5
+    
+    # decide if the normal force is positive or negative
+    if l_new < element.length:
+        Fx = force_vector[0]
+        Fy = force_vector[1]
+        N = - (Fx**2 + Fy**2)**0.5
+    else:
+        Fx = force_vector[0]
+        Fy = force_vector[1]
+        N = (Fx**2 + Fy**2)**0.5
+    return N
+
+
 
 class LinearTrussSolver:
     def __init__(self, static_system: StaticSystem):
@@ -38,8 +78,13 @@ class LinearTrussSolver:
         Assembles the system stiffness matrix and returns it as
         a NumPy array.
         """
+        # list of all elements
         all_elements = self.static_system.list_of_elements
+
+        # create square matrix filled with zeros
         matrix = np.zeros((self.dof, self.dof))
+
+        # do this for each element
         for element in all_elements:
             node1 = element.start_node.number
             node2 = element.end_node.number
@@ -49,11 +94,13 @@ class LinearTrussSolver:
                 node2*2-2,
                 node2*2-1
             )
+            # do this for each row of the current element stiffness matrix
             for r, element_row in enumerate(element.element_stiffness_matrix): # r -> row index
-                for c, element_value in enumerate(element_row): # c -> column index
+                # do this for each value (column) of a row of the element stiffness matrix
+                for c, matrix_value in enumerate(element_row): # c -> column index
                     row = index[r]
                     col = index[c]
-                    matrix[row][col] += element_value
+                    matrix[row][col] += matrix_value
         return matrix
 
     @cached_property
@@ -123,6 +170,31 @@ class LinearTrussSolver:
                 pass
         return np.array(displacements)
 
+    @cached_property
+    def normal_forces(self) -> list[float]:
+        """
+        # normal forces
+        - returns a list of all normal forces
+        """
+        normal_forces = []
+        for element in self.static_system.list_of_elements:
+            node_no1 = element.start_node.number
+            node_no2 = element.end_node.number
+            # create displacement vector for this element
+            disp = np.array([
+                self.displacements[node_no1*2-2],
+                self.displacements[node_no1*2-1],
+                self.displacements[node_no2*2-2],
+                self.displacements[node_no2*2-1]
+            ])
+            # print(disp)
+            # create force vecor for this element
+            n_force = _get_normal_force(
+                element=        element,
+                disp_vector=    disp
+            )
+            normal_forces.append(n_force)
+        return [float(val) for val in normal_forces]
 
 
 
