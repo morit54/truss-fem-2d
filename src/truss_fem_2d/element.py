@@ -1,12 +1,11 @@
 import numpy as np
 from math import sin, cos, tan
-from node import Node
+from .node import Node
 from functools import cached_property
-
-
 
 class TrussElement2D:
     def __init__(self,
+                 number: int,
                  start_node: Node,
                  end_node: Node,
                  E=210000000.0,
@@ -14,11 +13,13 @@ class TrussElement2D:
                  ):
         """
         Args:
+            number: number of the element (count)
             start_node: first node of the element
             end_node: second node of the element
             E: modulus of elasticity in [kN/m2]
             A: cross section area in [m2]
         """
+        self.number = number
         self.start_node = start_node
         self.end_node = end_node
         self.E = E
@@ -34,7 +35,7 @@ class TrussElement2D:
 
     @cached_property
     def alpha(self) -> float:
-        """returns the angle of the element in [rad]"""
+        """returns the angle of the element to the x-axis in [rad]"""
         delta_y = self.end_node.y - self.start_node.y
         delta_x = self.end_node.x - self.start_node.x
         alpha = tan(delta_y/delta_x)
@@ -79,7 +80,6 @@ class TrussElement2D:
             [k41, k42, k43, k44]
         ])
         return matrix
-
 
 
 
