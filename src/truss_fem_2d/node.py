@@ -6,7 +6,7 @@ class DegreeOfFreedom(Enum):
     """
     # DegreeOfFreedom
     ## purpose
-    - define, if a Node is fixed or movable
+    - choose, if a Node is fixed or movable
 
     ## why not Boolean?
     - readability
@@ -16,8 +16,8 @@ class DegreeOfFreedom(Enum):
         FIXED: the node <u>is not movable</u> for the individual Node and it's x or y direction
         MOVABLE: the node <u>is movable</u> for the individual Node and it's x or y direction
     """
-    FIXED = "unverschieblich"
-    MOVABLE = "verschieblich"
+    FIXED = "fixed"
+    MOVABLE = "movable"
 
 @dataclass
 class Node:

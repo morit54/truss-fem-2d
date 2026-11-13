@@ -3,6 +3,7 @@ import numpy as np
 from .static_system import StaticSystem
 from .node import DegreeOfFreedom
 from .element import TrussElement2D
+from .utils import num_round
 
 def _get_normal_force(
         element: TrussElement2D,
@@ -44,6 +45,11 @@ def _get_normal_force(
 
 
 class LinearTrussSolver:
+    """
+    # Linear Truss Solver
+    ## description
+    This solver uses the finite element method (2D) to assemble- and calculate the linear system of equations.
+    """
     def __init__(self, static_system: StaticSystem):
         self.static_system = static_system
 
@@ -53,7 +59,7 @@ class LinearTrussSolver:
         # degrees of freedom 
         - returns the degrees of freedom
         - each node has got two degrees of freedom
-        - equal to the size of the system stiffness matrix 
+        - dof is equal to the size of the system stiffness matrix 
         """
         dof = len(self.static_system.list_of_nodes) * 2
         return dof
@@ -62,7 +68,7 @@ class LinearTrussSolver:
     def delete_list(self) -> list:
         """
         # delete list
-        list of indices of the rows and columns that need to be deleted
+        - list of indices of the rows and columns that need to be deleted from the system stiffness matrix
         """
         indices = []
         for node in self.static_system.list_of_nodes:
@@ -75,8 +81,9 @@ class LinearTrussSolver:
     @cached_property
     def system_stiffness_matrix(self) -> np.ndarray:
         """
-        Assembles the system stiffness matrix and returns it as
-        a NumPy array.
+        # system stiffness matrix
+        - Assembles the system stiffness matrix and returns it as
+         a NumPy array.
         """
         # list of all elements
         all_elements = self.static_system.list_of_elements
@@ -105,7 +112,10 @@ class LinearTrussSolver:
 
     @cached_property
     def load_vector(self) -> np.ndarray:
-        """creates the load vector"""
+        """
+        # load vector
+        - creates the load vector and returns it as a NumPy array
+        """
         vector = [0]*self.dof
         for node in self.static_system.list_of_nodes:
             Fx_index = node.number*2-2
@@ -142,7 +152,7 @@ class LinearTrussSolver:
         """
         # reduced displacements in [m]
         - solves the linear system of equations
-        - returns the reduced displacements as a list
+        - returns the reduced displacements as a NumPy array
         - reduced -> without the zeros of the fixed dof's
         """
         displacements = np.linalg.solve(self.system_stiffness_matrix_reduced, self.load_vector_reduced)
@@ -152,6 +162,9 @@ class LinearTrussSolver:
     def displacements(self) -> np.ndarray:
         """
         # displacements in [m]
+        When the system of equations is solved, the results do not contain the zeros
+        from the deleted dof's. This method returns the complete displacements as a NumPy array
+        by just adding the zeros of the deleted dof's at the correct positions.
         """
         # create the list of all displacements
         displacements = [None]*self.dof
@@ -174,7 +187,7 @@ class LinearTrussSolver:
     def normal_forces(self) -> list[float]:
         """
         # normal forces
-        - returns a list of all normal forces
+        - returns a regular Python list of all normal forces
         """
         normal_forces = []
         for element in self.static_system.list_of_elements:
@@ -195,6 +208,42 @@ class LinearTrussSolver:
             )
             normal_forces.append(n_force)
         return [float(val) for val in normal_forces]
+
+    @cached_property
+    def support_forces(self):
+        """
+        # support forces
+        - calculates the support forces of the fixed nodes.
+        """
+        # multiply the deleted rows with the displacements
+        forces = []
+        for i in self.delete_list:
+            support_force = self.system_stiffness_matrix[i] @ self.displacements
+            forces.append(float(support_force))
+        return forces
+
+    def print_results(self) -> None:
+        """
+        # print results
+        - prints support reactions of the fixed nodes
+        - prints normal forces in the console
+        """
+        print("--- SUPPORT FORCES ---")
+        Fxy = ["Fx", "Fy"]
+        for i, support_force in enumerate(self.support_forces):
+            dof_index = self.delete_list[i]
+            node_no = int(dof_index/2) + 1
+            text = f"{Fxy[dof_index % 2]}{node_no} = {num_round(support_force, 2)} [kN]"
+            print(text)
+
+        print("\n--- NORMAL FORCES ---")
+        # print normal forces
+        for i, N in enumerate(self.normal_forces):
+            print(f"N{i+1} = {num_round(N, 2)} [kN]")
+        return None
+
+
+        
 
 
 

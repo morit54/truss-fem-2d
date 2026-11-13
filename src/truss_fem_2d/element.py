@@ -4,6 +4,11 @@ from .node import Node
 from functools import cached_property
 
 class TrussElement2D:
+    """
+    # TrussElement2D
+    ## purpose
+    - Calculating element specific parameters.
+    """
     def __init__(self,
                  number: int,
                  start_node: Node,
@@ -27,15 +32,24 @@ class TrussElement2D:
 
     @cached_property
     def length(self) -> float:
-        """returns the length of the element in [m]"""
+        """
+        # length
+        - returns the length of the element in [m]
+        """
         delta_y = self.end_node.y - self.start_node.y
         delta_x = self.end_node.x - self.start_node.x
         length = (delta_y**2 + delta_x**2)**0.5
+        # length cannot be 0
+        if length == 0:
+            raise ValueError(f"The length of an element cannot be 0.")
         return length
 
     @cached_property
     def alpha(self) -> float:
-        """returns the angle of the element to the x-axis in [rad]"""
+        """
+        # alpha
+        - returns the angle of the element to the x-axis in [rad]
+        """
         delta_y = self.end_node.y - self.start_node.y
         delta_x = self.end_node.x - self.start_node.x
         alpha = atan2(delta_y, delta_x)
@@ -43,7 +57,10 @@ class TrussElement2D:
 
     @cached_property
     def element_stiffness_matrix(self) -> np.ndarray:
-        """returns the element stiffness matrix in the global coordinate system"""
+        """
+        # element stiffness matrix (global)
+        - returns the element stiffness matrix in the global coordinate system
+        """
         factor = self.E * self.A / self.length
         c = cos(self.alpha)
         s = sin(self.alpha)

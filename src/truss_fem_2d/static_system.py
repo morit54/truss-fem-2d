@@ -1,6 +1,7 @@
 from .node import Node, DegreeOfFreedom
 from .element import TrussElement2D
 import matplotlib.pyplot as plt
+from .check_input import check_dof_input
 
 class StaticSystem:
     """
@@ -39,20 +40,20 @@ class StaticSystem:
                  y: float,
                  x_dof: DegreeOfFreedom = DegreeOfFreedom.MOVABLE,
                  y_dof: DegreeOfFreedom = DegreeOfFreedom.MOVABLE,
-                 Fx: float = 0,
-                 Fy: float = 0
+                 Fx: float = 0.0,
+                 Fy: float = 0.0
                  ) -> None:
         """
-        # add_node()
+        # add node
         ## purpose
         Adds a node to the static system: starting with node 1.
 
         ## overlapping nodes are allowed!
-        The add_node() method does not check if a similar node already exists.  
+        The add_node() method does not check if a node with matching coordinates already exists.  
         This is on purpose, because:
+        - All real 3D systems need to be simplified for a 2D system.
         - The simplified truss system can have overlapping nodes, that are
         completely independent of one another.
-        - All real 3d systems need to be simplified for a 2d system.
 
         Args:
             x: x-coordinate of the node
@@ -63,8 +64,16 @@ class StaticSystem:
             Fy: vertical force in [kN]
         """
         self.number_of_nodes += 1
-        new_node = Node(self.number_of_nodes, x, y, x_dof, y_dof, Fx, Fy)
-        self.list_of_nodes.append(new_node)
+        new_node = Node(
+            number=self.number_of_nodes,
+            x=float(x),
+            y=float(y),
+            x_dof=check_dof_input(x_dof),
+            y_dof=check_dof_input(y_dof),
+            Fx=float(Fx),
+            Fy=float(Fy)
+            )
+        self.list_of_nodes.append(new_node) # add the new node to the list
         return None
 
     def add_element(self,
@@ -94,14 +103,17 @@ class StaticSystem:
                 A=A
                 )
             self.list_of_elements.append(new_element)
-            
         except:
             row1 = f"Node {start_node} and node {end_node} do not exist in the list.\n"
             row2 = "Please add all nodes before adding an element."
             ValueError(row1 + row2)
         return None
 
-    def show_static_system(self):
+    def save_static_system_as_pdf(self) -> None:
+        """
+        # save static system as pdf
+        - saves the static system as a pdf
+        """
         x_coords = []
         y_coords = []
         for node in self.list_of_nodes:
@@ -148,5 +160,6 @@ class StaticSystem:
         ax.set_ylabel("y [m]")
         fig.savefig("static_system.pdf")
         return None
+
 
 
